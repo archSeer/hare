@@ -199,9 +199,24 @@ defmodule Hare.Publisher do
   @callback terminate(reason :: term, state) ::
               any
 
-  defmacro __using__(_opts \\ []) do
-    quote location: :keep do
+  defmacro __using__(opts \\ []) do
+    quote location: :keep, bind_quoted: [opts: opts] do
       @behaviour Hare.Publisher
+
+      spec = [
+        id: opts[:id] || __MODULE__,
+        start: Macro.escape(opts[:start]) || quote(do: {__MODULE__, :start_link, [arg]}),
+        restart: opts[:restart] || :permanent,
+        shutdown: opts[:shutdown] || 5000,
+        type: :worker
+      ]
+
+      @doc false
+      def child_spec(arg) do
+        %{unquote_splicing(spec)}
+      end
+
+      defoverridable child_spec: 1
 
       @doc false
       def init(initial),
